@@ -30,6 +30,50 @@ import { apiClient, queryKeys } from "@/lib/api";
 import { FormData } from "@/lib/types";
 import { useGenerationStore } from "@/lib/stores/generation-store";
 
+// Fallback data for when backend is not available
+const fallbackPlatforms = {
+  platforms: [
+    {
+      name: "blog_post",
+      display_name: "Blog Post", 
+      description: "Long-form blog content",
+      max_length: 2000
+    },
+    {
+      name: "linkedin",
+      display_name: "LinkedIn Post",
+      description: "Professional social media content",
+      max_length: 1300
+    },
+    {
+      name: "twitter",
+      display_name: "Twitter/X Post", 
+      description: "Short-form social media content",
+      max_length: 280
+    }
+  ]
+};
+
+const fallbackTones = {
+  tones: [
+    {
+      name: "informative",
+      display_name: "Informative",
+      description: "Educational, fact-focused, clear explanations"
+    },
+    {
+      name: "professional",
+      display_name: "Professional", 
+      description: "Business-appropriate, formal tone"
+    },
+    {
+      name: "casual",
+      display_name: "Casual",
+      description: "Friendly, conversational, approachable"
+    }
+  ]
+};
+
 const formSchema = z.object({
   topic: z
     .string()
@@ -73,22 +117,31 @@ export function GenerationForm({ onSubmit }: GenerationFormProps) {
 
   const isLoading = generationState.isGenerating || loadingPlatforms || loadingTones;
   const hasConnectionError = platformsError || tonesError;
+  
+  // Use fallback data when backend is not available
+  const platforms = platformsData || (hasConnectionError ? fallbackPlatforms : null);
+  const tones = tonesData || (hasConnectionError ? fallbackTones : null);
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5" />
+    <Card className="w-full glass-strong shadow-elevated border-0">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3 text-xl">
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-white" />
+          </div>
           Generate Content
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base">
           Create AI-powered content with research, writing, and image generation
         </CardDescription>
         {hasConnectionError && (
-          <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <div className="flex items-center gap-2 text-destructive text-sm">
-              <AlertCircle className="h-4 w-4" />
-              <span>Unable to connect to backend server. Please ensure the API server is running on http://localhost:8000</span>
+          <div className="mt-4 p-4 bg-brand-error/10 border border-brand-error/20 rounded-lg animate-fade-in">
+            <div className="flex items-center gap-3 text-brand-error">
+              <AlertCircle className="h-5 w-5" />
+              <div>
+                <div className="font-medium">Backend Server Offline</div>
+                <div className="text-sm">Using fallback data for testing. Start the backend server on http://localhost:8000 for full functionality.</div>
+              </div>
             </div>
           </div>
         )}
@@ -100,17 +153,18 @@ export function GenerationForm({ onSubmit }: GenerationFormProps) {
               control={form.control}
               name="topic"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Topic</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-base font-semibold">Content Topic</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Enter your topic (e.g., artificial intelligence, climate change)"
+                      placeholder="Enter your topic (e.g., artificial intelligence, climate change, productivity tips)"
+                      className="h-12 text-base bg-background/50 border-border/60 focus:border-brand-accent focus:ring-brand-accent/20"
                       {...field}
-                      disabled={isLoading}
+                      disabled={generationState.isGenerating}
                     />
                   </FormControl>
-                  <FormDescription>
-                    What would you like to create content about?
+                  <FormDescription className="text-sm">
+                    What would you like to create content about? Be specific for better results.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -122,32 +176,35 @@ export function GenerationForm({ onSubmit }: GenerationFormProps) {
                 control={form.control}
                 name="platform"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Platform</FormLabel>
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">Target Platform</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      disabled={isLoading}
+                      disabled={isLoading || (!platforms && !hasConnectionError)}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select platform" />
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Choose platform" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="max-w-[300px]">
-                        {platformsData?.platforms.map((platform) => (
-                          <SelectItem key={platform.name} value={platform.name}>
-                            <div className="flex flex-col">
+                      <SelectContent className="max-w-[400px]">
+                        {platforms?.platforms.map((platform) => (
+                          <SelectItem key={platform.name} value={platform.name} className="py-3">
+                            <div className="flex flex-col space-y-1">
                               <span className="font-medium">{platform.display_name}</span>
-                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                              <span className="text-xs text-muted-foreground leading-relaxed">
                                 {platform.description}
-                                {platform.max_length && ` (${platform.max_length} chars)`}
+                                {platform.max_length && ` • Max ${platform.max_length} chars`}
                               </span>
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription className="text-sm">
+                      Where will this content be published?
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -157,24 +214,24 @@ export function GenerationForm({ onSubmit }: GenerationFormProps) {
                 control={form.control}
                 name="tone"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tone</FormLabel>
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">Content Tone</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      disabled={isLoading}
+                      disabled={isLoading || (!tones && !hasConnectionError)}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select tone" />
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Choose tone" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="max-w-[300px]">
-                        {tonesData?.tones.map((tone) => (
-                          <SelectItem key={tone.name} value={tone.name}>
-                            <div className="flex flex-col">
+                      <SelectContent className="max-w-[400px]">
+                        {tones?.tones.map((tone) => (
+                          <SelectItem key={tone.name} value={tone.name} className="py-3">
+                            <div className="flex flex-col space-y-1">
                               <span className="font-medium">{tone.display_name}</span>
-                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                              <span className="text-xs text-muted-foreground leading-relaxed">
                                 {tone.description}
                               </span>
                             </div>
@@ -182,30 +239,46 @@ export function GenerationForm({ onSubmit }: GenerationFormProps) {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription className="text-sm">
+                      What style should the content have?
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-              size="lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {generationState.currentStep || "Loading..."}
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Content
-                </>
+            <div className="pt-4 border-t border-border/40">
+              <Button
+                type="submit"
+                className="w-full h-14 text-lg font-semibold gradient-primary hover:shadow-elevated disabled:opacity-60 transition-all duration-200"
+                disabled={isLoading}
+                size="lg"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center space-x-3">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <div>
+                      <div className="font-semibold">Generating Content...</div>
+                      <div className="text-sm opacity-90">
+                        {generationState.currentStep || "Initializing..."}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center space-x-3">
+                    <Sparkles className="h-5 w-5" />
+                    <span>Generate AI Content</span>
+                  </div>
+                )}
+              </Button>
+              
+              {!isLoading && (
+                <p className="text-sm text-muted-foreground text-center mt-3">
+                  Our AI agents will research, write, and create visuals for your content
+                </p>
               )}
-            </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

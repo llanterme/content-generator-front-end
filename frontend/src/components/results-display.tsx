@@ -12,20 +12,21 @@ import {
   Target,
   Hash,
   Share,
-  Loader2
+  Loader2,
+  History,
+  Brain
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useGenerationStore } from "@/lib/stores/generation-store";
 import { useHistoryStore } from "@/lib/stores/history-store";
 import { useLinkedInStore } from "@/lib/stores/linkedin-store";
-import { copyToClipboard, downloadTextFile, generateId, formatExecutionTime } from "@/lib/utils";
-import { HistoryItem } from "@/lib/types";
+import { copyToClipboard, downloadTextFile, generateId, formatExecutionTime, cn } from "@/lib/utils";
+import { HistoryItem, LinkedInPostRequest } from "@/lib/types";
 
 export function ResultsDisplay() {
   const { generationState } = useGenerationStore();
@@ -96,7 +97,7 @@ ${result.generated_image_path ? `Image: ${result.generated_image_path}` : ''}`;
 
     setIsPosting(true);
     try {
-      const request = {
+      const request: LinkedInPostRequest = {
         content: editedContent.trim(),
         visibility: "PUBLIC" as const,
       };
@@ -138,50 +139,67 @@ ${result.generated_image_path ? `Image: ${result.generated_image_path}` : ''}`;
 
   return (
     <>
-    <Card className="w-full max-w-4xl">
-      <CardHeader>
+    <Card className="w-full glass-strong shadow-elevated border-0 animate-fade-in">
+      <CardHeader className="pb-6">
         <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "w-12 h-12 rounded-xl flex items-center justify-center shadow-lg",
+              result.success ? "gradient-success" : "bg-brand-error"
+            )}>
               {result.success ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-6 w-6 text-white" />
               ) : (
-                <AlertCircle className="h-5 w-5 text-red-500" />
+                <AlertCircle className="h-6 w-6 text-white" />
               )}
-              Generation Results
-            </CardTitle>
-            <CardDescription>
-              Content generated for &quot;{result.topic}&quot;
-            </CardDescription>
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-bold">
+                Generation Results
+              </CardTitle>
+              <CardDescription className="text-base mt-1">
+                Content generated for &quot;{result.topic}&quot;
+              </CardDescription>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3">
             {/* LinkedIn Post Button */}
             {result.success && linkedInState.isConfigured && (
               <Button
                 onClick={handleLinkedInPost}
                 disabled={isPosting || !editedContent.trim()}
-                variant="accent"
-                size="sm"
-                className="bg-[#0077B5] hover:bg-[#005885] text-white disabled:opacity-50"
+                className="bg-[#0077B5] hover:bg-[#005885] text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                size="lg"
               >
                 {isPosting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Posting...
                   </>
                 ) : (
                   <>
-                    <Share className="h-4 w-4 mr-1" />
+                    <Share className="h-4 w-4 mr-2" />
                     Post to LinkedIn
                   </>
                 )}
               </Button>
             )}
-            <Button onClick={handleSaveToHistory} variant="outline" size="sm">
+            <Button 
+              onClick={handleSaveToHistory} 
+              variant="outline" 
+              size="lg"
+              className="glass hover:glass-strong shadow-md hover:shadow-lg transition-all"
+            >
+              <History className="h-4 w-4 mr-2" />
               Save to History
             </Button>
-            <Button onClick={handleDownload} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-1" />
+            <Button 
+              onClick={handleDownload} 
+              variant="outline" 
+              size="lg"
+              className="glass hover:glass-strong shadow-md hover:shadow-lg transition-all"
+            >
+              <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
           </div>
@@ -189,46 +207,71 @@ ${result.generated_image_path ? `Image: ${result.generated_image_path}` : ''}`;
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Metadata */}
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Target className="h-4 w-4" />
-            Platform: {result.platform}
-          </div>
-          <div className="flex items-center gap-1">
-            <Hash className="h-4 w-4" />
-            Tone: {result.tone}
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4" />
-            {formatExecutionTime(result.execution_time_seconds)}
-          </div>
-          <div className="flex items-center gap-1">
-            <FileText className="h-4 w-4" />
-            {result.word_count} words
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { icon: Target, label: "Platform", value: result.platform },
+            { icon: Hash, label: "Tone", value: result.tone },
+            { icon: Calendar, label: "Generation Time", value: formatExecutionTime(result.execution_time_seconds) },
+            { icon: FileText, label: "Word Count", value: `${result.word_count} words` }
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border/40">
+              <div className="w-10 h-10 rounded-lg bg-brand-accent/10 flex items-center justify-center">
+                <item.icon className="h-5 w-5 text-brand-accent" />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">{item.label}</div>
+                <div className="font-semibold">{item.value}</div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {!result.success && result.error && (
-          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <div className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-4 w-4" />
-              <span className="font-medium">Generation Error</span>
+          <div className="p-6 bg-brand-error/5 border-2 border-brand-error/20 rounded-xl animate-fade-in">
+            <div className="flex items-center gap-3 text-brand-error">
+              <AlertCircle className="h-6 w-6" />
+              <div>
+                <div className="font-semibold text-lg">Generation Error</div>
+                <p className="text-sm mt-1 opacity-80">{result.error}</p>
+              </div>
             </div>
-            <p className="mt-1 text-sm">{result.error}</p>
           </div>
         )}
 
         <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="content">Generated Content</TabsTrigger>
-            <TabsTrigger value="research">Research Insights</TabsTrigger>
-            <TabsTrigger value="media">Media</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-12 p-1 glass-strong">
+            <TabsTrigger 
+              value="content" 
+              className="flex items-center gap-2 font-medium data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+            >
+              <FileText className="h-4 w-4" />
+              Generated Content
+            </TabsTrigger>
+            <TabsTrigger 
+              value="research"
+              className="flex items-center gap-2 font-medium data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+            >
+              <Brain className="h-4 w-4" />
+              Research Insights
+            </TabsTrigger>
+            <TabsTrigger 
+              value="media"
+              className="flex items-center gap-2 font-medium data-[state=active]:gradient-primary data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Media
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="content" className="space-y-4">
-            <div className="space-y-2">
+          <TabsContent value="content" className="mt-6">
+            <div className="glass-strong rounded-xl p-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Generated Content</h3>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+                  Generated Content
+                </h3>
                 <CopyButton 
                   text={editedContent} 
                   field="content" 
@@ -238,65 +281,100 @@ ${result.generated_image_path ? `Image: ${result.generated_image_path}` : ''}`;
               <Textarea
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className="min-h-[200px] font-mono text-sm"
+                className="min-h-[300px] text-base leading-relaxed bg-background/50 border-border/60 focus:border-brand-accent focus:ring-brand-accent/20 rounded-xl"
                 placeholder="Edit your content here..."
               />
-              <div className="text-sm text-muted-foreground">
-                {editedContent.split(/\s+/).filter(word => word.length > 0).length} words
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-semibold">{editedContent.split(/\s+/).filter(word => word.length > 0).length}</span> words
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Edit content above and changes will be reflected in all actions
+                </div>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="research" className="space-y-4">
-            <div className="space-y-2">
+          <TabsContent value="research" className="mt-6">
+            <div className="glass-strong rounded-xl p-6 space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Research Insights</h3>
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center">
+                    <Brain className="h-4 w-4 text-white" />
+                  </div>
+                  Research Insights
+                </h3>
                 <CopyButton 
                   text={result.research_bullet_points.join('\n')} 
                   field="research" 
                   label="Copy Research" 
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {result.research_bullet_points.map((point, index) => (
-                  <div key={index} className="flex gap-2 p-3 bg-muted rounded-lg">
-                    <Badge variant="outline" className="shrink-0">
+                  <div key={index} className="flex gap-4 p-4 bg-background/50 rounded-xl border border-border/40 hover:border-brand-accent/40 transition-colors">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-accent/10 text-brand-accent font-bold shrink-0">
                       {index + 1}
-                    </Badge>
-                    <p className="text-sm">{point}</p>
+                    </div>
+                    <p className="text-base leading-relaxed">{point}</p>
                   </div>
                 ))}
+              </div>
+              <div className="p-4 bg-brand-accent/5 rounded-xl border border-brand-accent/20">
+                <div className="flex items-center gap-2 text-brand-accent mb-2">
+                  <Brain className="h-4 w-4" />
+                  <span className="font-semibold">Research Summary</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Our research agent found <span className="font-semibold">{result.research_bullet_points.length}</span> key insights to inform your content creation.
+                </p>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="media" className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Generated Media</h3>
+          <TabsContent value="media" className="mt-6">
+            <div className="glass-strong rounded-xl p-6 space-y-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
+                  <ImageIcon className="h-4 w-4 text-white" />
+                </div>
+                Generated Media
+              </h3>
+              
               {result.generated_image_path ? (
-                <div className="space-y-4">
-                  <div className="relative rounded-lg border overflow-hidden">
+                <div className="space-y-6">
+                  <div className="relative rounded-xl border-2 border-border/40 overflow-hidden bg-muted/20 shadow-lg">
                     <img
                       src={`${process.env.NEXT_PUBLIC_API_URL}/${result.generated_image_path}`}
                       alt={`Generated image for ${result.topic}`}
-                      className="w-full h-auto max-h-96 object-contain"
+                      className="w-full h-auto max-h-[500px] object-contain"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                         target.nextElementSibling?.classList.remove('hidden');
                       }}
                     />
-                    <div className="hidden p-8 text-center text-muted-foreground">
-                      <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Image could not be loaded</p>
-                      <p className="text-xs">{result.generated_image_path}</p>
+                    <div className="hidden p-12 text-center text-muted-foreground">
+                      <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">Image could not be loaded</p>
+                      <p className="text-sm mt-2 opacity-70">{result.generated_image_path}</p>
                     </div>
                   </div>
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Image path: {result.generated_image_path}</span>
+                  
+                  <div className="flex items-center justify-between p-4 bg-brand-success/5 rounded-xl border border-brand-success/20">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-brand-success" />
+                      <div>
+                        <div className="font-semibold text-brand-success">Image Generated Successfully</div>
+                        <div className="text-sm text-muted-foreground">
+                          Path: {result.generated_image_path.split('/').pop()}
+                        </div>
+                      </div>
+                    </div>
                     <Button 
                       variant="outline" 
-                      size="sm"
+                      size="lg"
+                      className="glass hover:glass-strong shadow-md hover:shadow-lg transition-all"
                       onClick={() => {
                         if (result.generated_image_path) {
                           const link = document.createElement('a');
@@ -306,15 +384,18 @@ ${result.generated_image_path ? `Image: ${result.generated_image_path}` : ''}`;
                         }
                       }}
                     >
-                      <Download className="h-3 w-3 mr-1" />
+                      <Download className="h-4 w-4 mr-2" />
                       Download Image
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="p-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                  <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No image was generated for this content</p>
+                <div className="p-12 text-center border-2 border-dashed border-border/40 rounded-xl bg-muted/20">
+                  <ImageIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-lg font-medium text-muted-foreground">No image was generated</p>
+                  <p className="text-sm text-muted-foreground/70 mt-2">
+                    The image agent didn&apos;t create visual content for this generation
+                  </p>
                 </div>
               )}
             </div>

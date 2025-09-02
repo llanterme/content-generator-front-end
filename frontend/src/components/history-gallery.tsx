@@ -12,7 +12,8 @@ import {
   Download,
   Copy,
   CheckCircle2,
-  Share
+  Share,
+  Loader2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHistoryStore } from "@/lib/stores/history-store";
 import { useLinkedInStore } from "@/lib/stores/linkedin-store";
 import { formatTimestamp, truncateText, copyToClipboard, downloadTextFile, formatExecutionTime } from "@/lib/utils";
-import { HistoryItem } from "@/lib/types";
+import { HistoryItem, LinkedInPostRequest } from "@/lib/types";
 
 export function HistoryGallery() {
   const { history, loadHistory, removeHistoryItem, clearHistory } = useHistoryStore();
@@ -80,7 +81,7 @@ ${item.response.generated_image_path ? `Image: ${item.response.generated_image_p
 
     setIsPosting(true);
     try {
-      const request = {
+      const request: LinkedInPostRequest = {
         content: item.response.generated_content.trim(),
         visibility: "PUBLIC" as const,
       };
@@ -162,51 +163,53 @@ ${item.response.generated_image_path ? `Image: ${item.response.generated_image_p
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
           {history.map((item) => (
-            <Card key={item.id} className="relative">
+            <Card key={item.id} className="relative h-fit">
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <CardTitle className="text-sm font-semibold leading-tight line-clamp-2">
                       {item.response.topic}
                     </CardTitle>
-                    <CardDescription className="text-xs">
+                    <CardDescription className="text-xs text-muted-foreground">
                       {formatTimestamp(item.timestamp)}
                     </CardDescription>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="ml-2 shrink-0"
+                    className="shrink-0 h-8 w-8 p-0"
                     onClick={() => removeHistoryItem(item.id)}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant="secondary" className="text-xs">
+              <CardContent className="pt-0 space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-xs px-2 py-1">
                     {item.response.platform}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs px-2 py-1">
                     {item.response.tone}
                   </Badge>
                 </div>
 
-                <p className="text-sm text-muted-foreground line-clamp-3">
+                <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
                   {truncateText(item.response.generated_content, 100)}
                 </p>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <FileText className="h-3 w-3" />
-                  {item.response.word_count} words
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    <span>{item.response.word_count} words</span>
+                  </div>
                   {item.response.generated_image_path && (
-                    <>
+                    <div className="flex items-center gap-1">
                       <ImageIcon className="h-3 w-3" />
-                      Image
-                    </>
+                      <span>Image</span>
+                    </div>
                   )}
                 </div>
 

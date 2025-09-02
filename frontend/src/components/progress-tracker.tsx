@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, PenTool, Image, CheckCircle, AlertCircle } from "lucide-react";
+import { Search, PenTool, Image, CheckCircle, AlertCircle, Activity } from "lucide-react";
 
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,112 +55,174 @@ export function ProgressTracker() {
   const hasError = !!generationState.error;
 
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
+    <Card className="w-full glass-strong shadow-elevated border-0 animate-fade-in">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center justify-between">
-          <span>Generation Progress</span>
-          <Badge variant={hasError ? "destructive" : generationState.progress === 100 ? "default" : "secondary"}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center">
+              <Activity className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xl">Generation Progress</span>
+          </div>
+          <Badge 
+            variant={hasError ? "destructive" : generationState.progress === 100 ? "default" : "secondary"}
+            className="px-3 py-1 font-medium"
+          >
             {hasError ? "Error" : generationState.progress === 100 ? "Complete" : "In Progress"}
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Progress</span>
-            <span>{generationState.progress}%</span>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-base font-semibold">Overall Progress</span>
+            <div className="text-2xl font-bold text-brand-accent">
+              {generationState.progress}%
+            </div>
           </div>
-          <Progress value={generationState.progress} className="h-2" />
+          <Progress 
+            value={generationState.progress} 
+            className="h-4 bg-muted/50 rounded-full border border-border/20" 
+          />
         </div>
 
         {/* Current Step Message */}
         {generationState.currentStep && (
           <div className={cn(
-            "p-3 rounded-lg text-sm",
+            "p-4 rounded-xl border-2 transition-all duration-300",
             hasError 
-              ? "bg-destructive/10 text-destructive" 
-              : "bg-muted text-muted-foreground"
+              ? "bg-brand-error/5 border-brand-error/20 text-brand-error" 
+              : generationState.progress === 100
+              ? "bg-brand-success/5 border-brand-success/20 text-brand-success"
+              : "bg-brand-accent/5 border-brand-accent/20 text-brand-accent"
           )}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {hasError ? (
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="h-5 w-5" />
               ) : generationState.progress === 100 ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CheckCircle className="h-5 w-5" />
               ) : (
-                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <div className="relative">
+                  <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <div className="absolute inset-0 h-5 w-5 border-2 border-current/20 rounded-full" />
+                </div>
               )}
-              {generationState.currentStep}
-            </div>
-            {generationState.error && (
-              <div className="mt-2 text-xs">
-                Error: {generationState.error}
+              <div>
+                <div className="font-semibold text-base">
+                  {generationState.currentStep}
+                </div>
+                {generationState.error && (
+                  <div className="mt-1 text-sm opacity-80">
+                    {generationState.error}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
         {/* Step Indicators */}
-        <div className="space-y-3">
-          {steps.map((step, index) => {
-            const isCompleted = index < currentStepIndex || generationState.progress === 100;
-            const isCurrent = index === currentStepIndex && generationState.isGenerating;
-            const isError = hasError && index === currentStepIndex;
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold">AI Agent Status</h3>
+          <div className="space-y-4">
+            {steps.map((step, index) => {
+              const isCompleted = index < currentStepIndex || generationState.progress === 100;
+              const isCurrent = index === currentStepIndex && generationState.isGenerating;
+              const isError = hasError && index === currentStepIndex;
 
-            const StepIcon = step.icon;
+              const StepIcon = step.icon;
 
-            return (
-              <div key={step.id} className="flex items-center gap-3">
-                <div
+              return (
+                <div 
+                  key={step.id} 
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors",
-                    isCompleted
-                      ? "border-green-500 bg-green-500 text-white"
+                    "flex items-center gap-4 p-4 rounded-xl border transition-all duration-300",
+                    isCompleted 
+                      ? "bg-brand-success/5 border-brand-success/20" 
                       : isCurrent
-                      ? "border-primary bg-primary text-primary-foreground"
+                      ? "bg-brand-accent/5 border-brand-accent/20 shadow-lg"
                       : isError
-                      ? "border-destructive bg-destructive text-destructive-foreground"
-                      : "border-muted-foreground/20 bg-muted"
+                      ? "bg-brand-error/5 border-brand-error/20"
+                      : "bg-muted/20 border-border/40"
                   )}
                 >
-                  {isCompleted ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : isError ? (
-                    <AlertCircle className="h-4 w-4" />
-                  ) : (
-                    <StepIcon className="h-4 w-4" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "font-medium",
-                        isCompleted || isCurrent
-                          ? "text-foreground"
-                          : "text-muted-foreground"
-                      )}
-                    >
-                      {step.label}
-                    </span>
-                    {isCurrent && !isError && (
-                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all duration-300",
+                      isCompleted
+                        ? "border-brand-success bg-brand-success text-white shadow-lg"
+                        : isCurrent
+                        ? "border-brand-accent bg-brand-accent text-white shadow-lg animate-pulse-slow"
+                        : isError
+                        ? "border-brand-error bg-brand-error text-white"
+                        : "border-border bg-muted"
+                    )}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="h-5 w-5" />
+                    ) : isError ? (
+                      <AlertCircle className="h-5 w-5" />
+                    ) : (
+                      <StepIcon className="h-5 w-5" />
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {step.description}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "font-semibold text-base",
+                          isCompleted || isCurrent
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {step.label} Agent
+                      </span>
+                      {isCurrent && !isError && (
+                        <div className="flex items-center gap-1">
+                          <div className="h-2 w-2 rounded-full bg-brand-accent animate-pulse" />
+                          <div className="h-2 w-2 rounded-full bg-brand-accent animate-pulse" style={{ animationDelay: "0.3s" }} />
+                          <div className="h-2 w-2 rounded-full bg-brand-accent animate-pulse" style={{ animationDelay: "0.6s" }} />
+                        </div>
+                      )}
+                      {isCompleted && (
+                        <Badge variant="outline" className="text-xs bg-brand-success/10 text-brand-success border-brand-success/20">
+                          Complete
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {/* Execution Time */}
         {generationState.result && (
-          <div className="pt-2 border-t">
-            <div className="text-sm text-muted-foreground">
-              Completed in {generationState.result.execution_time_seconds.toFixed(1)} seconds
+          <div className="pt-6 border-t border-border/40">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-success/5 border border-brand-success/20">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-brand-success" />
+                <div>
+                  <div className="font-semibold text-brand-success">Generation Complete!</div>
+                  <div className="text-sm text-muted-foreground">
+                    All AI agents finished successfully
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-brand-success">
+                  {generationState.result.execution_time_seconds.toFixed(1)}s
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Total time
+                </div>
+              </div>
             </div>
           </div>
         )}
